@@ -8,6 +8,7 @@ const cors = require('cors');
 const registerRoute = require('./routes/register');
 const checkRoute = require('./routes/check');
 const exportRoute = require('./routes/export');
+const adminStatsRoute = require('./routes/adminStats');
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.get('/', (req, res) => {
 app.use('/api/register', registerRoute);
 app.use('/api/registrations', checkRoute);
 app.use('/api/export', exportRoute);
+app.use('/api/admin', adminStatsRoute);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

@@ -26,6 +26,7 @@ router.get('/csv', async (req, res) => {
         t.mentor_phone,
         s.id_no,
         s.name,
+        s.degree,
         s.branch,
         s.year,
         s.gender,

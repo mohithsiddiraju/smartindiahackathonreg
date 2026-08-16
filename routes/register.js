@@ -50,12 +50,13 @@ router.post('/', async (req, res) => {
     for (const s of students) {
       await client.query(
         `INSERT INTO students
-           (team_id, id_no, name, branch, year, gender, phone, residential_status, is_team_lead)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+           (team_id, id_no, name, degree, branch, year, gender, phone, residential_status, is_team_lead)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
         [
           teamId,
           s.idNo,
           s.name,
+          s.degree,
           s.branch,
           s.year,
           s.gender,
