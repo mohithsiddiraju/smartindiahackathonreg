@@ -10,10 +10,12 @@
   },
   "license": "ISC",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "json2csv": "^6.0.0-alpha.2",
+    "json2csv": "^5.0.7",
+    "jsonwebtoken": "^9.0.3",
     "pg": "^8.23.0"
   }
 }
