@@ -71,22 +71,38 @@ router.post('/bulk-assign', async (req, res) => {
     return res.status(400).json({ error: 'No assignments provided.' });
   }
 
-  const results = { updated: 0, notFound: [] };
+  const results = { updated: 0, notFound: [], invalidRoom: [] };
 
-  for (const a of assignments) {
-    if (!a.displayId || !a.roomCode) continue;
-    const result = await pool.query(
-      'UPDATE teams SET room_code = $1 WHERE display_id = $2',
-      [a.roomCode, a.displayId]
-    );
-    if (result.rowCount > 0) {
-      results.updated++;
-    } else {
-      results.notFound.push(a.displayId);
+  try {
+    for (const a of assignments) {
+      if (!a.displayId || !a.roomCode) continue;
+
+      try {
+        const result = await pool.query(
+          'UPDATE teams SET room_code = $1 WHERE display_id = $2',
+          [a.roomCode, a.displayId]
+        );
+        if (result.rowCount > 0) {
+          results.updated++;
+        } else {
+          results.notFound.push(a.displayId);
+        }
+      } catch (rowErr) {
+        // 23503 = foreign_key_violation — the roomCode in this row doesn't
+        // exist in the rooms table yet. Report it instead of crashing everything.
+        if (rowErr.code === '23503') {
+          results.invalidRoom.push(`${a.displayId} (room "${a.roomCode}" not created yet)`);
+        } else {
+          throw rowErr;
+        }
+      }
     }
-  }
 
-  res.json({ success: true, ...results });
+    res.json({ success: true, ...results });
+  } catch (err) {
+    console.error('Bulk assign failed:', err.message, err.stack);
+    res.status(500).json({ error: 'Bulk assign failed. Check server logs for details.' });
+  }
 });
 
 // ---- Sessions ----
