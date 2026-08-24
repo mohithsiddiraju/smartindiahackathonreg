@@ -6,6 +6,24 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 
+// Maps each domain to the short code used in the display ID, e.g. "AI/ML" -> "AI".
+// Edit this to match your actual domain list if you change DOMAIN_DATA in the frontend.
+const DOMAIN_CODES = {
+  'AI/ML': 'AI',
+  'Blockchain': 'BC',
+  'Healthcare': 'HC',
+  'Smart Automation': 'SA',
+  'Fintech': 'FT',
+  'Miscellaneous': 'MS'
+};
+
+function domainCodeFor(domain) {
+  if (DOMAIN_CODES[domain]) return DOMAIN_CODES[domain];
+  // fallback for any domain not in the map above: first 2 letters, uppercased
+  const letters = domain.replace(/[^a-zA-Z]/g, '').toUpperCase();
+  return letters.slice(0, 2) || 'GN';
+}
+
 router.post('/', async (req, res) => {
   const { domain, problemStatement, mentor, students } = req.body;
 
@@ -39,11 +57,26 @@ router.post('/', async (req, res) => {
   try {
     await client.query('BEGIN');
 
+    // ---- Get the next number for this domain, atomically ----
+    // This single UPDATE-or-INSERT is safe even if two teams in the same
+    // domain submit at the exact same moment: Postgres locks this row
+    // during the query, so the second request simply waits its turn.
+    const domainCode = domainCodeFor(domain);
+    const counterResult = await client.query(
+      `INSERT INTO domain_counters (domain_code, counter)
+       VALUES ($1, 1)
+       ON CONFLICT (domain_code) DO UPDATE SET counter = domain_counters.counter + 1
+       RETURNING counter`,
+      [domainCode]
+    );
+    const counter = counterResult.rows[0].counter;
+    const displayId = `${domainCode}${String(counter).padStart(3, '0')}`; // e.g. "AI003"
+
     const teamResult = await client.query(
-      `INSERT INTO teams (domain, problem_statement, mentor_name, mentor_id, mentor_dept, mentor_phone)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO teams (display_id, domain, problem_statement, mentor_name, mentor_id, mentor_dept, mentor_phone)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING team_id`,
-      [domain, problemStatement, mentor.name, mentor.id, mentor.dept, mentor.phone]
+      [displayId, domain, problemStatement, mentor.name, mentor.id, mentor.dept, mentor.phone]
     );
     const teamId = teamResult.rows[0].team_id;
 
@@ -68,7 +101,7 @@ router.post('/', async (req, res) => {
     }
 
     await client.query('COMMIT');
-    res.json({ success: true, teamId });
+    res.json({ success: true, teamId: displayId });
   } catch (err) {
     await client.query('ROLLBACK'); // undo everything from this attempt
 

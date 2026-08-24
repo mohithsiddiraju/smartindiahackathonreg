@@ -18,6 +18,7 @@ router.get('/csv', async (req, res) => {
     const result = await pool.query(`
       SELECT
         t.team_id,
+        t.display_id,
         t.domain,
         t.problem_statement,
         t.mentor_name,
@@ -38,6 +39,18 @@ router.get('/csv', async (req, res) => {
       ORDER BY t.team_id, s.is_team_lead DESC
     `);
 
+    if (result.rows.length === 0) {
+      // No registrations yet — return an empty CSV with just headers instead of erroring.
+      const emptyHeaders = [
+        'team_id', 'domain', 'problem_statement', 'mentor_name', 'mentor_id',
+        'mentor_dept', 'mentor_phone', 'id_no', 'name', 'degree', 'branch',
+        'year', 'gender', 'phone', 'residential_status', 'is_team_lead'
+      ];
+      res.header('Content-Type', 'text/csv');
+      res.attachment(`sih_registrations_${Date.now()}.csv`);
+      return res.send(emptyHeaders.join(',') + '\n');
+    }
+
     const parser = new Parser();
     const csv = parser.parse(result.rows);
 
@@ -45,7 +58,7 @@ router.get('/csv', async (req, res) => {
     res.attachment(`sih_registrations_${Date.now()}.csv`);
     res.send(csv);
   } catch (err) {
-    console.error(err);
+    console.error('CSV export failed:', err.message, err.stack);
     res.status(500).json({ error: 'Could not generate CSV.' });
   }
 });
