@@ -9,6 +9,8 @@ const registerRoute = require('./routes/register');
 const checkRoute = require('./routes/check');
 const exportRoute = require('./routes/export');
 const adminStatsRoute = require('./routes/adminStats');
+const adminAttendanceRoute = require('./routes/adminAttendance');
+const volunteerRoute = require('./routes/volunteer');
 
 const app = express();
 
@@ -25,6 +27,8 @@ app.use('/api/register', registerRoute);
 app.use('/api/registrations', checkRoute);
 app.use('/api/export', exportRoute);
 app.use('/api/admin', adminStatsRoute);
+app.use('/api/admin', adminAttendanceRoute);
+app.use('/api/volunteer', volunteerRoute);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
